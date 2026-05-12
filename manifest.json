@@ -1,0 +1,27 @@
+{
+  "manifest_version": "0.3",
+  "name": "immoweb-pp-mcp",
+  "display_name": "Immoweb",
+  "version": "4.5.0",
+  "description": "Belgian real-estate classifieds — search houses, apartments, offices, land, and rentals across Belgium and Luxembourg via the Immoweb public search JSON",
+  "author": {
+    "name": "CLI Printing Press"
+  },
+  "license": "Apache-2.0",
+  "server": {
+    "type": "binary",
+    "entry_point": "bin/immoweb-pp-mcp",
+    "mcp_config": {
+      "command": "${__dirname}/bin/immoweb-pp-mcp",
+      "args": []
+    }
+  },
+  "compatibility": {
+    "claude_desktop": ">=1.0.0",
+    "platforms": [
+      "darwin",
+      "linux",
+      "win32"
+    ]
+  }
+}

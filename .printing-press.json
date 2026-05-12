@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-05-12T11:18:48.807873Z",
+  "printing_press_version": "4.5.0",
+  "api_name": "immoweb",
+  "display_name": "Immoweb",
+  "cli_name": "immoweb-pp-cli",
+  "owner": "bibihez",
+  "printer_name": "bibihez",
+  "spec_path": "catalog/specs/immoweb-spec.yaml",
+  "spec_format": "openapi3",
+  "spec_checksum": "sha256:144bc1d46a9a43511dbf8ad3f1d4bbbca7e1db0a16faae87aa0783a9210dc990",
+  "catalog_entry": "immoweb",
+  "category": "other",
+  "description": "Belgian real-estate classifieds — search houses, apartments, offices, land, and rentals across Belgium and Luxembourg via the Immoweb public search JSON",
+  "mcp_binary": "immoweb-pp-mcp",
+  "mcp_tool_count": 1,
+  "mcp_public_tool_count": 1,
+  "mcp_ready": "full",
+  "api_version": "1.0.0",
+  "auth_type": "none"
+}

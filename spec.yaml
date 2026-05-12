@@ -1,0 +1,448 @@
+openapi: "3.0.3"
+info:
+  title: Immoweb Search API
+  description: |
+    Public, anonymous JSON search surface used by the Immoweb.be web app to
+    list real-estate classifieds (houses, apartments, offices, land, garages,
+    etc.) for sale or rent across Belgium and Luxembourg.
+
+    No authentication required. The endpoint backs the `/en/search/...` UI;
+    sending `Accept: application/json` with a normal browser User-Agent
+    returns the full result set, paginated 30 per page. Detail pages
+    (`/classified/{id}`) are HTML with the listing data embedded in
+    `window.classified = { ... }` and are intentionally out of scope for
+    this spec — agents that need them should scrape the HTML.
+
+    Spec authored from the live endpoint (verified 2026-05-12) and the
+    `feldeh/immoweb-scraper` reference implementation.
+  version: "1.0.0"
+  contact:
+    name: Immoweb
+    url: https://www.immoweb.be
+
+servers:
+  - url: https://www.immoweb.be
+    description: Immoweb production web
+
+tags:
+  - name: search
+    description: Classified search and filtering
+
+paths:
+  /en/search-results/{propertyType}/{transactionType}:
+    get:
+      operationId: searchClassifieds
+      summary: Search real-estate classifieds
+      description: |
+        List classifieds matching a property type, transaction type, and a
+        wide set of optional filters (price, surface, bedrooms, location,
+        EPC score, new-build flag, etc.). Returns 30 results per page;
+        `totalItems` carries the full match count.
+      tags: [search]
+      parameters:
+        - name: propertyType
+          in: path
+          required: true
+          description: |
+            Property category. `house-and-apartment` is the broad combo used
+            by the homepage; the others are single-category searches.
+          schema:
+            type: string
+            enum:
+              - house
+              - apartment
+              - house-and-apartment
+              - new-real-estate-project-houses
+              - new-real-estate-project-apartments
+              - office
+              - business
+              - industry
+              - land
+              - garage
+              - exceptional-property
+              - public-sale
+        - name: transactionType
+          in: path
+          required: true
+          description: For sale or for rent
+          schema:
+            type: string
+            enum: [for-sale, for-rent]
+        - name: countries
+          in: query
+          description: Comma-separated ISO 3166-1 alpha-2 country codes
+          schema:
+            type: string
+            default: BE
+            example: BE,LU
+        - name: page
+          in: query
+          description: 1-indexed page number (30 results per page)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 333
+            default: 1
+        - name: orderBy
+          in: query
+          description: Sort order applied to the result set
+          schema:
+            type: string
+            enum:
+              - relevance
+              - newest
+              - cheapest
+              - most_expensive
+              - postal_code
+              - relevance_price_asc
+              - relevance_price_desc
+            default: relevance
+        - name: minPrice
+          in: query
+          description: Minimum price (EUR)
+          schema:
+            type: integer
+            minimum: 0
+        - name: maxPrice
+          in: query
+          description: Maximum price (EUR)
+          schema:
+            type: integer
+            minimum: 0
+        - name: minSurface
+          in: query
+          description: Minimum net habitable surface (m²)
+          schema:
+            type: integer
+            minimum: 0
+        - name: maxSurface
+          in: query
+          description: Maximum net habitable surface (m²)
+          schema:
+            type: integer
+            minimum: 0
+        - name: minBedroomCount
+          in: query
+          description: Minimum number of bedrooms
+          schema:
+            type: integer
+            minimum: 0
+        - name: maxBedroomCount
+          in: query
+          description: Maximum number of bedrooms
+          schema:
+            type: integer
+            minimum: 0
+        - name: postalCodes
+          in: query
+          description: |
+            Filter by postal codes. Format is `BE-1000,2000,3000`
+            (country prefix optional for Belgian codes).
+          schema:
+            type: string
+            example: BE-1000,2000
+        - name: districts
+          in: query
+          description: Comma-separated district names (e.g. `Brussels,Mechelen`)
+          schema:
+            type: string
+        - name: provinces
+          in: query
+          description: Comma-separated province names (e.g. `Antwerp,Liege`)
+          schema:
+            type: string
+        - name: regions
+          in: query
+          description: Comma-separated region codes
+          schema:
+            type: string
+            enum: [BRUSSELS, FLANDERS, WALLONIA]
+        - name: priceType
+          in: query
+          description: Price interpretation for rentals
+          schema:
+            type: string
+            enum: [MONTHLY_RENTAL_PRICE, YEARLY_RENTAL_PRICE, MAIN_VALUE]
+        - name: isALifeAnnuitySale
+          in: query
+          description: Restrict to (or exclude) life-annuity sales
+          schema:
+            type: boolean
+        - name: isNewlyBuilt
+          in: query
+          description: Restrict to newly-built listings
+          schema:
+            type: boolean
+        - name: hasGarden
+          in: query
+          description: Only listings with a garden
+          schema:
+            type: boolean
+        - name: hasTerrace
+          in: query
+          description: Only listings with a terrace
+          schema:
+            type: boolean
+        - name: hasSwimmingPool
+          in: query
+          description: Only listings with a swimming pool
+          schema:
+            type: boolean
+        - name: hasLift
+          in: query
+          description: Only listings with a lift
+          schema:
+            type: boolean
+        - name: hasParking
+          in: query
+          description: Only listings with parking
+          schema:
+            type: boolean
+        - name: hasPhotos
+          in: query
+          description: Only listings with photos
+          schema:
+            type: boolean
+        - name: hasVideo
+          in: query
+          description: Only listings with video tours
+          schema:
+            type: boolean
+        - name: minEpcScore
+          in: query
+          description: Minimum EPC (energy performance) score
+          schema:
+            type: string
+            enum: [A++, A+, A, B, C, D, E, F, G]
+        - name: maxEpcScore
+          in: query
+          description: Maximum EPC (energy performance) score
+          schema:
+            type: string
+            enum: [A++, A+, A, B, C, D, E, F, G]
+      responses:
+        "200":
+          description: Paginated list of classifieds matching the filters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+        "400":
+          description: Invalid filter combination
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    SearchResponse:
+      type: object
+      description: One page of search results plus the result-set metadata
+      properties:
+        criteria:
+          type: object
+          description: Echoed query criteria after normalization
+          additionalProperties: true
+        sort:
+          type: string
+          description: Effective sort order applied
+        currentPage:
+          type: integer
+        totalItems:
+          type: integer
+          description: Total matches across all pages
+        range:
+          type: string
+          description: Index range covered by this page (e.g. "0-29")
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/Classified"
+        seoFooterContent:
+          type: string
+          nullable: true
+        metaTitle:
+          type: string
+          nullable: true
+        metaDescription:
+          type: string
+          nullable: true
+
+    Classified:
+      type: object
+      description: A single listing summary as returned by the search endpoint
+      properties:
+        id:
+          type: integer
+          description: Numeric classified id (use to build `/en/classified/{id}`)
+        customerName:
+          type: string
+          nullable: true
+          description: Agency or seller display name
+        customerLogoUrl:
+          type: string
+          format: uri
+          nullable: true
+        flags:
+          type: object
+          properties:
+            main:
+              type: string
+              nullable: true
+              description: Status flag (e.g. `under_option`, `sold`)
+            percentSold:
+              type: number
+              nullable: true
+        media:
+          type: object
+          description: Photo, video, and virtual-tour assets
+          additionalProperties: true
+        price:
+          $ref: "#/components/schemas/Price"
+        property:
+          $ref: "#/components/schemas/Property"
+        transaction:
+          $ref: "#/components/schemas/Transaction"
+        publication:
+          type: object
+          additionalProperties: true
+        has360Tour:
+          type: boolean
+          nullable: true
+        hasVirtualTour:
+          type: boolean
+          nullable: true
+        hasVideo:
+          type: boolean
+          nullable: true
+
+    Price:
+      type: object
+      properties:
+        type:
+          type: string
+          description: e.g. `residential_sale`, `residential_monthly_rent`
+        mainValue:
+          type: number
+          nullable: true
+          description: Headline numeric price
+        mainDisplayPrice:
+          type: string
+          nullable: true
+          description: Formatted price (e.g. `€780,000`)
+        shortDisplayPrice:
+          type: string
+          nullable: true
+        label:
+          type: string
+          nullable: true
+        language:
+          type: string
+
+    Property:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Top-level category (e.g. `HOUSE`, `APARTMENT`)
+        subtype:
+          type: string
+          description: Specific subtype (e.g. `VILLA`, `LOFT`)
+        title:
+          type: string
+          nullable: true
+        bedroomCount:
+          type: integer
+          nullable: true
+        roomCount:
+          type: integer
+          nullable: true
+        netHabitableSurface:
+          type: number
+          nullable: true
+          description: Net habitable surface in m²
+        landSurface:
+          type: number
+          nullable: true
+          description: Land surface in m² (where applicable)
+        location:
+          $ref: "#/components/schemas/Location"
+
+    Location:
+      type: object
+      properties:
+        country:
+          type: string
+        region:
+          type: string
+          nullable: true
+        regionCode:
+          type: string
+          nullable: true
+          enum: [BRUSSELS, FLANDERS, WALLONIA]
+        province:
+          type: string
+          nullable: true
+        district:
+          type: string
+          nullable: true
+        locality:
+          type: string
+        postalCode:
+          type: string
+        street:
+          type: string
+          nullable: true
+        number:
+          type: string
+          nullable: true
+        box:
+          type: string
+          nullable: true
+        floor:
+          type: integer
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        approximated:
+          type: boolean
+          nullable: true
+
+    Transaction:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [FOR_SALE, FOR_RENT]
+        certificate:
+          type: string
+          nullable: true
+          description: EPC certificate label
+        certificateLogoUrl:
+          type: string
+          format: uri
+          nullable: true
+        hidePrice:
+          type: boolean
+          nullable: true
+        sale:
+          type: object
+          nullable: true
+          additionalProperties: true
+        rental:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string

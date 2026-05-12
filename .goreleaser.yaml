@@ -1,0 +1,51 @@
+version: 2
+project_name: immoweb-pp-cli
+changelog:
+  disable: true
+builds:
+  - id: immoweb-pp-cli
+    main: ./cmd/immoweb-pp-cli
+    binary: immoweb-pp-cli
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X immoweb-pp-cli/internal/cli.version={{ .Version }}
+    targets:
+      - darwin_amd64
+      - darwin_arm64
+      - linux_amd64
+      - linux_arm64
+      - windows_amd64
+      - windows_arm64
+  - id: immoweb-pp-mcp
+    main: ./cmd/immoweb-pp-mcp
+    binary: immoweb-pp-mcp
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+    targets:
+      - darwin_amd64
+      - darwin_arm64
+      - linux_amd64
+      - linux_arm64
+      - windows_amd64
+      - windows_arm64
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+checksum:
+  name_template: checksums.txt
+brews:
+  - name: immoweb-pp-cli
+    repository:
+      owner: bibihez
+      name: homebrew-tap
+    homepage: "https://github.com/bibihez/immoweb-pp-cli"
+    description: "Public, anonymous JSON search surface used by the Immoweb.be web app to list real-estate classifieds (houses,..."
+    install: |
+      bin.install "immoweb-pp-cli"
+      bin.install "immoweb-pp-mcp"
