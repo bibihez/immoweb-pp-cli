@@ -67,7 +67,8 @@ func newHTTPClient(timeout time.Duration, jar http.CookieJar) *http.Client {
 func New(cfg *config.Config, timeout time.Duration, rateLimit float64) *Client {
 	homeDir, _ := os.UserHomeDir()
 	cacheDir := filepath.Join(homeDir, ".cache", "immoweb-pp-cli", "http")
-	httpClient := newHTTPClient(timeout, nil)
+	jar := newPersistentJar(filepath.Join(homeDir, ".cache", "immoweb-pp-cli", "cookies.json"))
+	httpClient := newHTTPClient(timeout, jar)
 	return &Client{
 		BaseURL:    strings.TrimRight(cfg.BaseURL, "/"),
 		Config:     cfg,
@@ -304,6 +305,19 @@ func (c *Client) do(method, path string, params map[string]string, body any, hea
 		if resp.StatusCode >= 500 && attempt < maxRetries {
 			wait := time.Duration(math.Pow(2, float64(attempt))) * time.Second
 			fmt.Fprintf(os.Stderr, "server error %d, retrying in %s (attempt %d/%d)\n", resp.StatusCode, wait, attempt+1, maxRetries)
+			time.Sleep(wait)
+			lastErr = apiErr
+			continue
+		}
+
+		// 403 from Immoweb is almost always a DataDome bot challenge, not a
+		// real auth failure (this is an unauthenticated public API). The
+		// retry lets the persistent cookie jar pick up a `datadome` cookie
+		// from the failed response and replay the next attempt as a
+		// "returning visitor."
+		if resp.StatusCode == 403 && attempt < maxRetries {
+			wait := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+			fmt.Fprintf(os.Stderr, "blocked (403), retrying in %s (attempt %d/%d)\n", wait, attempt+1, maxRetries)
 			time.Sleep(wait)
 			lastErr = apiErr
 			continue
