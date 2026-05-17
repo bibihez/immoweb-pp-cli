@@ -41,7 +41,7 @@ func IsUUID(s string) bool {
 // shape — adding columns, dropping indexes, changing FTS5 tokenizers —
 // so an older binary refuses to open a newer database rather than silently
 // producing wrong results against a schema it cannot read.
-const StoreSchemaVersion = 2
+const StoreSchemaVersion = 3
 
 const resourcesFTSCreateSQL = `CREATE VIRTUAL TABLE IF NOT EXISTS resources_fts USING fts5(
 	id, resource_type, content, tokenize='porter unicode61'
@@ -285,6 +285,28 @@ func (s *Store) migrate(ctx context.Context) error {
 			sort TEXT,
 			total_items INTEGER
 		)`,
+		// observations: append-only log of every classified seen by every
+		// sync. Powers the temporal-analytics layer (watch, drops, stale,
+		// market) by letting queries reason about how a listing's price
+		// and status evolved across snapshots, which the en/resources
+		// upsert path cannot — those overwrite per id.
+		`CREATE TABLE IF NOT EXISTS observations (
+			listing_id INTEGER NOT NULL,
+			observed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			price INTEGER,
+			customer_name TEXT,
+			flag_main TEXT,
+			bedroom_count INTEGER,
+			surface REAL,
+			postal_code TEXT,
+			locality TEXT,
+			property_type TEXT,
+			property_subtype TEXT,
+			PRIMARY KEY (listing_id, observed_at)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_observations_listing ON observations(listing_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_observations_at ON observations(observed_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_observations_postal ON observations(postal_code)`,
 	}
 
 	// Run every migration — including the column backfill and the

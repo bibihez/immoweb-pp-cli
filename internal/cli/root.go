@@ -172,6 +172,8 @@ Run 'immoweb-pp-cli doctor' to verify auth and connectivity.`,
 	rootCmd.AddCommand(newWhichCmd(flags))
 	rootCmd.AddCommand(newImportCmd(flags))
 	rootCmd.AddCommand(newSyncCmd(flags))
+	rootCmd.AddCommand(newWatchCmd(flags))
+	rootCmd.AddCommand(newDropsCmd(flags))
 	rootCmd.AddCommand(newWorkflowCmd(flags))
 	rootCmd.AddCommand(newAPICmd(flags))
 	rootCmd.AddCommand(newEnPromotedCmd(flags))

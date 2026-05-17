@@ -830,6 +830,14 @@ type discriminatorDispatch struct {
 var discriminatorDispatchers = map[string]discriminatorDispatch{}
 
 func upsertResourceBatch(db *store.Store, resource string, items []json.RawMessage) (int, int, error) {
+	// Append to the temporal observations log alongside the standard upsert.
+	// The log powers watch/drops/market — they need price/status snapshots
+	// across syncs, which the upsert path overwrites per id. Best-effort:
+	// a log failure must not fail the sync itself, since the sync's user-
+	// visible job is keeping the en/resources tables fresh.
+	if resource == "en" {
+		_, _ = db.AppendObservationsBatch(items)
+	}
 	if _, ok := discriminatorDispatchers[resource]; !ok {
 		return db.UpsertBatch(resource, items)
 	}
